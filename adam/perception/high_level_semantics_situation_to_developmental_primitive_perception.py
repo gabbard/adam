@@ -65,7 +65,7 @@ class HighLevelSemanticsSituationToDevelopmentalPrimitivePerceptionGenerator(
     """
 
     def generate_perception(
-        self, situation: HighLevelSemanticsSituation, chooser: SequenceChooser
+            self, situation: HighLevelSemanticsSituation, chooser: SequenceChooser
     ) -> PerceptualRepresentation[DevelopmentalPrimitivePerceptionFrame]:
         check_arg(
             situation.ontology == self.ontology,
@@ -157,6 +157,18 @@ class _PerceptionGeneration:
     r"""
     `PropertyPerception`\ s perceived by the learner.
     """
+    _first_slot_object_to_relations: Dict[ObjectPerception, List[Relation[ObjectPerception]]] = attrib(
+        init=False, default=Factory(dict)
+    )
+    r"""
+    Maps `ObjectPerception`\ s to `Relations`\ s in which they have the first slot.
+    """
+    _second_slot_object_to_relations: Dict[ObjectPerception, List[Relation[ObjectPerception]]] = attrib(
+        init=False, default=Factory(dict)
+    )
+    r"""
+    Maps `ObjectPerception`\ s to `Relations`\ s in which they have the second slot.
+    """
 
     def do(self) -> PerceptualRepresentation[DevelopmentalPrimitivePerceptionFrame]:
         self._sanity_check_situation()
@@ -173,6 +185,8 @@ class _PerceptionGeneration:
             self._perceive_relation(relation)
             for relation in self._situation.always_relations
         )
+
+        self._initialize_object_to_relation_map()
 
         # Handle implicit size relations
         self._perceive_implicit_size()
@@ -228,12 +242,12 @@ class _PerceptionGeneration:
 
     def _sanity_check_situation(self) -> None:
         if (
-            quantify(
-                property_ == IS_SPEAKER
-                for object_ in self._situation.objects
-                for property_ in object_.properties
-            )
-            > 1
+                quantify(
+                    property_ == IS_SPEAKER
+                    for object_ in self._situation.objects
+                    for property_ in object_.properties
+                )
+                > 1
         ):
             raise TooManySpeakersException(
                 f"Situations with multiple speakers are not supported: {self._situation}"
@@ -264,7 +278,7 @@ class _PerceptionGeneration:
         )
 
     def _perceive_region(
-        self, region: Region[SituationObject]
+            self, region: Region[SituationObject]
     ) -> Region[ObjectPerception]:
         return region.copy_remapping_objects(self._objects_to_perceptions)
 
@@ -319,9 +333,9 @@ class _PerceptionGeneration:
         )
 
     def _bind_action_objects_variables_to_perceived_objects(
-        self,
-        situation_action: Action[OntologyNode, SituationObject],
-        action_description: ActionDescription,
+            self,
+            situation_action: Action[OntologyNode, SituationObject],
+            action_description: ActionDescription,
     ) -> Mapping[SituationObject, Union[Region[ObjectPerception], ObjectPerception]]:
         if len(action_description.frames) != 1:
             raise RuntimeError(
@@ -329,8 +343,8 @@ class _PerceptionGeneration:
                 "subcategorization frame"
             )
         if any(
-            len(fillers) > 1
-            for fillers in situation_action.argument_roles_to_fillers.value_groups()
+                len(fillers) > 1
+                for fillers in situation_action.argument_roles_to_fillers.value_groups()
         ):
             raise RuntimeError("Cannot handle multiple fillers for an argument role yet.")
 
@@ -370,9 +384,9 @@ class _PerceptionGeneration:
         # for the action PUT.
         action_variables_from_non_frames: List[SituationObject] = []
         for condition_set in (
-            action_description.enduring_conditions,
-            action_description.preconditions,
-            action_description.postconditions,
+                action_description.enduring_conditions,
+                action_description.preconditions,
+                action_description.postconditions,
         ):
             for condition in condition_set:
                 condition.accumulate_referenced_objects(action_variables_from_non_frames)
@@ -403,7 +417,7 @@ class _PerceptionGeneration:
         return bindings
 
     def _bind_action_object_variable(
-        self, action_object_variable: SituationObject
+            self, action_object_variable: SituationObject
     ) -> ObjectPerception:
         """
         Binds an action object variable to an object that we have perceived.
@@ -420,7 +434,7 @@ class _PerceptionGeneration:
                 ontology_node,
             ) in self._object_perceptions_to_ontology_nodes.items()
             if ontology.is_subtype_of(ontology_node, action_object_variable.ontology_node)
-            and ontology.has_all_properties(
+               and ontology.has_all_properties(
                 ontology_node, action_object_variable.properties
             )
         ]
@@ -449,12 +463,12 @@ class _PerceptionGeneration:
                 )
 
     def _perceive_action_relations(
-        self,
-        conditions: ImmutableSet[Relation[SituationObject]],
-        *,
-        action_object_variables_to_object_perceptions: Mapping[
-            SituationObject, Union[ObjectPerception, Region[ObjectPerception]]
-        ],
+            self,
+            conditions: ImmutableSet[Relation[SituationObject]],
+            *,
+            action_object_variables_to_object_perceptions: Mapping[
+                SituationObject, Union[ObjectPerception, Region[ObjectPerception]]
+            ],
     ) -> AbstractSet[Relation[ObjectPerception]]:
         """
 
@@ -492,21 +506,21 @@ class _PerceptionGeneration:
                     relation
                     for relation in relations
                     if not (
-                        relation.relation_type == condition.relation_type
-                        and relation.first_slot == perception_1
-                        and relation.second_slot == perception_2
+                            relation.relation_type == condition.relation_type
+                            and relation.first_slot == perception_1
+                            and relation.second_slot == perception_2
                     )
                 ]
 
         return immutableset(relations)
 
     def _perceive_object_or_region_relation_filler(
-        self,
-        slot_filler: Union[SituationObject, Region[SituationObject]],
-        *,
-        action_object_variables_to_object_perceptions: Mapping[
-            SituationObject, Union[ObjectPerception, Region[ObjectPerception]]
-        ],
+            self,
+            slot_filler: Union[SituationObject, Region[SituationObject]],
+            *,
+            action_object_variables_to_object_perceptions: Mapping[
+                SituationObject, Union[ObjectPerception, Region[ObjectPerception]]
+            ],
     ) -> Union[ObjectPerception, Region[ObjectPerception]]:
         if isinstance(slot_filler, Region):
             object_mapping: Dict[SituationObject, ObjectPerception] = {}
@@ -548,7 +562,7 @@ class _PerceptionGeneration:
 
             # If it is a liquid not inside a container, add two-dimensional property
             if LIQUID in GAILA_PHASE_1_ONTOLOGY.properties_for_node(
-                situation_object.ontology_node
+                    situation_object.ontology_node
             ) and not any(
                 r.first_slot == situation_object
                 and r.relation_type == IN_REGION
@@ -577,10 +591,10 @@ class _PerceptionGeneration:
                 )
 
     def _perceive_property(
-        self,
-        attributes_of_property: ImmutableSet[OntologyNode],
-        perceived_object: ObjectPerception,
-        property_: OntologyNode,
+            self,
+            attributes_of_property: ImmutableSet[OntologyNode],
+            perceived_object: ObjectPerception,
+            property_: OntologyNode,
     ) -> None:
         # e.g. is this a perceivable property, binary property, color, etc...
         if PERCEIVABLE in attributes_of_property:
@@ -615,7 +629,7 @@ class _PerceptionGeneration:
             self._property_assertion_perceptions.append(perceived_property)
 
     def _determine_color(
-        self, situation_object: SituationObject
+            self, situation_object: SituationObject
     ) -> Optional[OntologyNode]:
         explicitly_specified_colors = immutableset(
             property_
@@ -647,8 +661,8 @@ class _PerceptionGeneration:
 
     def _perceive_objects(self) -> None:
         if not any(
-            situation_object.ontology_node == GROUND
-            for situation_object in self._situation.objects
+                situation_object.ontology_node == GROUND
+                for situation_object in self._situation.objects
         ):
             ground_schemata = only(self._generator.ontology.structural_schemata(GROUND))
             ground_observed = self._instantiate_object_schema(
@@ -688,12 +702,12 @@ class _PerceptionGeneration:
             ] = situation_object.ontology_node
 
     def _instantiate_object_schema(
-        self,
-        schema: ObjectStructuralSchema,
-        *,
-        # if the object being instantiated corresponds to an object
-        # in the situation description, then this will track that object
-        situation_object: Optional[SituationObject] = None,
+            self,
+            schema: ObjectStructuralSchema,
+            *,
+            # if the object being instantiated corresponds to an object
+            # in the situation description, then this will track that object
+            situation_object: Optional[SituationObject] = None,
     ) -> ObjectPerception:
         root_object_perception = ObjectPerception(
             debug_handle=self._object_handle_generator.subscripted_handle(schema)
@@ -751,7 +765,7 @@ class _PerceptionGeneration:
         return root_object_perception
 
     def _compute_during(
-        self, during_from_action_description: Optional[DuringAction[ObjectPerception]]
+            self, during_from_action_description: Optional[DuringAction[ObjectPerception]]
     ) -> Optional[DuringAction[ObjectPerception]]:
         during_from_situation = only(self._situation.actions).during
 
@@ -771,12 +785,12 @@ class _PerceptionGeneration:
             return None
 
     def _translate_path(
-        self, path: SpatialPath[SituationObject]
+            self, path: SpatialPath[SituationObject]
     ) -> SpatialPath[ObjectPerception]:
         return path.copy_remapping_objects(self._objects_to_perceptions)
 
     def _perceive_relation(
-        self, relation: Relation[SituationObject]
+            self, relation: Relation[SituationObject]
     ) -> Relation[ObjectPerception]:
         return relation.copy_remapping_objects(self._objects_to_perceptions)
 
@@ -787,11 +801,14 @@ class _PerceptionGeneration:
             # TODO: we should make a lookup map for this
             # Explicit relation types are tracked so that implicitly defined ones from the Ontology
             # do not overwrite them.
-            explicit_relations_predicated_of_object = immutableset(
-                relation
-                for relation in self._relation_perceptions
-                if relation.first_slot == situation_object
-            )
+
+            explicit_relations_predicated_of_object = self._first_slot_object_to_relations[situation_object]
+            # explicit_relations_predicated_of_object = immutableset(
+            #     relation
+            #     for relation in self._relation_perceptions
+            #     if relation.first_slot == situation_object
+            # )
+
             if situation_object not in self._object_perceptions_to_ontology_nodes:
                 raise RuntimeError(
                     f"Unable to determine implicit relationship types for {situation_object}"
@@ -820,12 +837,12 @@ class _PerceptionGeneration:
                             )
                     for implicit_relation in relations_predicated_of_object_type:
                         if (
-                            implicit_relation.second_slot
-                            == self._object_perceptions_to_ontology_nodes[other_object]
+                                implicit_relation.second_slot
+                                == self._object_perceptions_to_ontology_nodes[other_object]
                         ):
                             if (
-                                implicit_relation.relation_type
-                                not in explicit_relation_types
+                                    implicit_relation.relation_type
+                                    not in explicit_relation_types
                             ):
                                 self._relation_perceptions.append(
                                     implicit_relation.copy_remapping_objects(
@@ -839,6 +856,19 @@ class _PerceptionGeneration:
                                         }
                                     )
                                 )
+
+    def _initialize_object_to_relation_map(self) -> None:
+        for obj in self._object_perceptions:
+            self._first_slot_object_to_relations[obj] = immutableset(
+                relation
+                for relation in self._relation_perceptions
+                if relation.first_slot == obj
+            )
+            self._first_slot_object_to_relations[obj] = immutableset(
+                relation
+                for relation in self._relation_perceptions
+                if relation.second_slot == obj
+            )
 
 
 GAILA_PHASE_1_PERCEPTION_GENERATOR = HighLevelSemanticsSituationToDevelopmentalPrimitivePerceptionGenerator(
