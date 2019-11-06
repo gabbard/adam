@@ -10,7 +10,17 @@ then defines `PerceptionGraphPattern`\ s to match them.
 from abc import ABC, abstractmethod
 from copy import copy
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, Mapping, Optional, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+    Sequence,
+)
 
 import graphviz
 from attr import attrib, attrs
@@ -301,6 +311,13 @@ class PerceptionGraph:
         return node_id
 
 
+NodeSorter = Callable[[Iterable["NodePredicate"]], Sequence["NodePredicate"]]
+"""
+Function to give an ordering to nodes of a `PerceptionGraphPattern`,
+used by `PerceptionGraphPattern.reordered_copy()`.
+"""
+
+
 @attrs(frozen=True, slots=True)
 class PerceptionGraphPattern:
     r"""
@@ -373,6 +390,19 @@ class PerceptionGraphPattern:
             perception_graph=perception_graph, pattern_graph=pattern_graph
         )
         return PerceptionGraphPattern(pattern_graph)
+
+    def reordered_copy(self, node_sorter: NodeSorter) -> "PerceptionGraphPattern":
+        """
+        Gets a copy of the `PerceptionGraph` with a different iteration order
+        over the nodes and edges.
+
+        We think this may have a significant impact on match speed.
+        """
+        new_node_order = node_sorter(self._graph.nodes)
+        new_graph = DiGraph()
+        new_graph.add_nodes_from(new_node_order)
+        new_graph.add_edges_from(self._graph.edges.data(True))
+        return PerceptionGraphPattern(new_graph)
 
     @staticmethod
     def _translate_graph(perception_graph: DiGraph, pattern_graph: DiGraph) -> None:
