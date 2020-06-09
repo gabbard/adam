@@ -96,7 +96,7 @@ def phase1_instances(
     return GeneratedFromSituationsInstanceGroup(
         description,
         situations=situations,
-        language_generator=GAILA_PHASE_1_LANGUAGE_GENERATOR,
+            language_generator=GAILA_PHASE_1_LANGUAGE_GENERATOR,
         perception_generator=perception_generator,
         chooser=PHASE1_CHOOSER_FACTORY(),
     )
