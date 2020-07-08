@@ -16,6 +16,7 @@ from adam.curriculum.preposition_curriculum import (
     _in_template,
     _behind_template,
     _in_front_template,
+    _near_template,
 )
 from adam.learner import LearningExample
 from adam.learner.language_mode import LanguageMode
@@ -468,6 +469,68 @@ def test_pursuit_preposition_in_front_learner(language_mode):
             LearningExample(perceptual_representation, linguistic_description)
         )
 
+    for (
+        _,
+        test_linguistic_description,
+        test_perceptual_representation,
+    ) in in_front_test_curriculum.instances():
+        descriptions_from_learner = learner.describe(test_perceptual_representation)
+        gold = test_linguistic_description.as_token_sequence()
+        assert descriptions_from_learner
+        assert [desc.as_token_sequence() for desc in descriptions_from_learner][0] == gold
+
+
+@pytest.mark.parametrize("language_mode", [LanguageMode.ENGLISH, LanguageMode.CHINESE])
+def test_pursuit_preposition_near_learner(language_mode):
+    rng = random.Random()
+    rng.seed(0)
+    learner = PrepositionPursuitLearner(
+        learning_factor=0.5,
+        graph_match_confirmation_threshold=0.7,
+        lexicon_entry_threshold=0.7,
+        rng=rng,
+        smoothing_parameter=0.001,
+        ontology=GAILA_PHASE_1_ONTOLOGY,
+        object_recognizer=object_recognizer_factory(language_mode),
+        language_mode=language_mode,
+    )  # type: ignore
+    ball = standard_object("ball", BALL)
+    table = standard_object("table", TABLE)
+    learner_object = standard_object("learner", LEARNER, added_properties=[IS_ADDRESSEE])
+    mom = standard_object("mom", MOM, added_properties=[IS_SPEAKER])
+    language_generator = phase1_language_generator(language_mode)
+    in_front_train_curriculum = phase1_instances(
+        "Preposition In Front Unit Train",
+        situations=sampled(
+            _near_template(
+                ball, table, immutableset([learner_object, mom]), is_training=True
+            ),
+            chooser=PHASE1_CHOOSER_FACTORY(),
+            ontology=GAILA_PHASE_1_ONTOLOGY,
+            max_to_sample=10,
+        ),
+        language_generator=language_generator,
+    )
+    in_front_test_curriculum = phase1_instances(
+        "Preposition In Front Unit Test",
+        situations=sampled(
+            _near_template(
+                ball, table, immutableset([learner_object, mom]), is_training=False
+            ),
+            chooser=PHASE1_CHOOSER_FACTORY(),
+            ontology=GAILA_PHASE_1_ONTOLOGY,
+            max_to_sample=1,
+        ),
+        language_generator=language_generator,
+    )
+    for (
+        _,
+        linguistic_description,
+        perceptual_representation,
+    ) in in_front_train_curriculum.instances():
+        learner.observe(
+            LearningExample(perceptual_representation, linguistic_description)
+        )
     for (
         _,
         test_linguistic_description,

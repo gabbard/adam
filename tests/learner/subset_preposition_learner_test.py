@@ -14,6 +14,7 @@ from adam.curriculum.preposition_curriculum import (
     _on_template,
     _over_template,
     _under_template,
+    _near_template,
 )
 from adam.learner import LearningExample
 from adam.learner.integrated_learner import IntegratedTemplateLearner
@@ -218,6 +219,25 @@ def test_subset_preposition_in_front(language_mode, learner):
             immutableset([learner_object, mom]),
             is_training=True,
             is_near=True,
+        ),
+        language_generator=phase1_language_generator(language_mode),
+    )
+
+
+@pytest.mark.parametrize("language_mode", [LanguageMode.ENGLISH, LanguageMode.CHINESE])
+@pytest.mark.parametrize(
+    "learner", [subset_relation_language_factory, integrated_learner_factory]
+)
+def test_subset_preposition_near(language_mode, learner):
+    ball = standard_object("ball", BALL)
+    table = standard_object("table", TABLE)
+    learner_object = standard_object("learner", LEARNER, added_properties=[IS_ADDRESSEE])
+    mom = standard_object("mom", MOM, added_properties=[IS_SPEAKER])
+
+    run_preposition_test(
+        learner(language_mode),
+        _near_template(
+            ball, table, immutableset([learner_object, mom]), is_training=True
         ),
         language_generator=phase1_language_generator(language_mode),
     )
