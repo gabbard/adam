@@ -3,5 +3,5 @@ _includes:
    - "m9.params"
 
 experiment: 'm9-relations-subset'
-curriculum: 'm9-relations'
+curriculum: 'near-testing'
 learner: 'preposition-subset'

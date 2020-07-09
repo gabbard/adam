@@ -1,7 +1,7 @@
 import logging
 from itertools import repeat
 from typing import Callable, Optional
-
+from adam.curriculum.preposition_curriculum import make_prepositions_curriculum
 from adam.language_specific.chinese.chinese_language_generator import (
     GAILA_PHASE_1_CHINESE_LANGUAGE_GENERATOR,
 )
@@ -215,6 +215,7 @@ def curriculum_from_params(params: Parameters):
             "m9-events",
             "m9-debug",
             "m9-complete",
+            "near-testing",
         ],
     )
 
@@ -227,6 +228,8 @@ def curriculum_from_params(params: Parameters):
 
     if curriculum_name == "m6-deniz":
         return (make_m6_curriculum(), [])
+    elif curriculum_name == "near-testing":
+        return (make_prepositions_curriculum(), [])
     elif curriculum_name == "each-object-by-itself":
         return (
             # We show the learned each item 6 times,
