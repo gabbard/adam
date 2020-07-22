@@ -48,6 +48,7 @@ from adam.curriculum.phase1_curriculum import (
     build_gaila_phase1_relation_curriculum,
     build_gaila_phase1_verb_curriculum,
     build_gaila_phase_1_curriculum,
+    make_part_whole_curriculum,
 )
 from adam.experiment import Experiment, execute_experiment
 from adam.experiment.observer import LearningProgressHtmlLogger, CandidateAccuracyObserver
@@ -265,6 +266,7 @@ def curriculum_from_params(
         "m9-complete": (build_gaila_phase_1_curriculum, None),
         "m13-imprecise-size": (make_imprecise_size_curriculum, None),
         "m13-imprecise-temporal": (make_imprecise_temporal_descriptions, None),
+        "m13-part-whole": (make_part_whole_curriculum, None),
         "m13-subtle-verb-distinction": (make_subtle_verb_distinctions_curriculum, None),
         "m13-object-restrictions": (build_functionally_defined_objects_curriculum, None),
         "m13-functionally-defined-objects": (

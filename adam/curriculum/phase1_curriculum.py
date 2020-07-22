@@ -628,6 +628,16 @@ def _make_part_whole_curriculum(  # pylint: disable=unused-argument
     return ExplicitWithSituationInstanceGroup("part of instances", all_instances)
 
 
+def make_part_whole_curriculum(
+    num_samples: Optional[int],
+    noise_objects: Optional[int],
+    language_generator: LanguageGenerator[
+        HighLevelSemanticsSituation, LinearizedDependencyTree
+    ],
+) -> Sequence[Phase1InstanceGroup]:
+    return [_make_part_whole_curriculum(num_samples, noise_objects, language_generator)]
+
+
 def _make_my_your_object_curriculum(
     num_samples: Optional[int],
     noise_objects: Optional[int],

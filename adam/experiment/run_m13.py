@@ -14,14 +14,17 @@ def main(params: Parameters):
 
     param_files: List[Path] = []
 
-    if params.boolean("include_objects", default=True):
-        param_files.append(m13_experiments_dir / "objects.params")
+    # if params.boolean("include_objects", default=True):
+    #    param_files.append(m13_experiments_dir / "objects.params")
 
-    if params.boolean("include_imprecise_size", default=True):
-        param_files.append(m13_experiments_dir / "imprecise_size.params")
+    # if params.boolean("include_imprecise_size", default=True):
+    #    param_files.append(m13_experiments_dir / "imprecise_size.params")
 
-    if params.boolean("include_imprecise_temporal", default=True):
-        param_files.append(m13_experiments_dir / "imprecise_temporal.params")
+    # if params.boolean("include_imprecise_temporal", default=True):
+    #    param_files.append(m13_experiments_dir / "imprecise_temporal.params")
+
+    if params.boolean("include_part_whole", default=True):
+        param_files.append(m13_experiments_dir / "part_whole.params")
 
     if params.boolean("include_subtle_verb", default=True):
         param_files.append(m13_experiments_dir / "subtle_verb.params")
