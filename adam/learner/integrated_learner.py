@@ -2,7 +2,7 @@ import itertools
 import logging
 from itertools import chain, combinations
 from pathlib import Path
-from typing import AbstractSet, Iterator, Mapping, Optional, Tuple, List
+from typing import AbstractSet, Iterator, Mapping, Optional, Tuple, List, Union
 
 from adam.language import LinguisticDescription, TokenSequenceLinguisticDescription
 from adam.language_specific.english import ENGLISH_BLOCK_DETERMINERS
@@ -28,6 +28,7 @@ from adam.semantics import (
     SemanticNode,
     GROUND_OBJECT_CONCEPT,
     LearnerSemantics,
+    SyntaxSemanticsVariable,
 )
 from attr import attrib, attrs
 from attr.validators import instance_of, optional
@@ -245,7 +246,12 @@ class IntegratedTemplateLearner(
             return cur_string
 
     def _instantiate_object(
-        self, object_node: ObjectSemanticNode, learner_semantics: "LearnerSemantics"
+        self,
+        object_node: ObjectSemanticNode,
+        learner_semantics: "LearnerSemantics",
+        *,
+        action_elements: Optional[Tuple[Union[str, SyntaxSemanticsVariable], ...]] = None,
+        slot: Optional[SyntaxSemanticsVariable] = None
     ) -> Iterator[Tuple[str, ...]]:
 
         # For now, we assume the order in which modifiers is expressed is arbitrary.
@@ -262,12 +268,7 @@ class IntegratedTemplateLearner(
         # See https://github.com/isi-vista/adam/issues/794 .
         # relations_for_object = learner_semantics.objects_to_relation_in_slot1[object_node]
 
-        for template in self.object_learner.templates_for_concept(object_node.concept):
-
-            cur_string = template.instantiate(
-                template_variable_to_filler=immutabledict()
-            ).as_token_sequence()
-
+        def apply_attributes(input_str: Tuple[str, ...]) -> Iterator[Tuple[str, ...]]:
             for num_attributes in range(
                 min(len(attributes_we_can_express), self._max_attributes_per_word)
             ):
@@ -286,9 +287,35 @@ class IntegratedTemplateLearner(
                             yield self._add_determiners(
                                 object_node,
                                 attribute_template.instantiate(
-                                    template_variable_to_filler={SLOT1: cur_string}
+                                    template_variable_to_filler={SLOT1: input_str}
                                 ).as_token_sequence(),
                             )
+
+        # Handle Recognizing Functional Objects
+        if (
+            self.functional_learner
+            and action_elements
+            and slot
+            and not self.object_learner.templates_for_concept(object_node.concept)
+        ):
+            cur_string = self.functional_learner.template_for_concept(
+                action_elements, slot
+            )
+
+            if cur_string:
+                for output in apply_attributes(cur_string):
+                    yield output
+                yield self._add_determiners(object_node, cur_string)
+
+        for template in self.object_learner.templates_for_concept(object_node.concept):
+
+            cur_string = template.instantiate(
+                template_variable_to_filler=immutabledict()
+            ).as_token_sequence()
+
+            for output in apply_attributes(cur_string):
+                yield output
+
             yield self._add_determiners(object_node, cur_string)
 
     def _instantiate_relation(
@@ -319,15 +346,25 @@ class IntegratedTemplateLearner(
     ) -> Iterator[Tuple[str, ...]]:
         if not self.action_learner:
             raise RuntimeError("Cannot instantiate an action without an action learner")
-        slots_to_instantiations = {
-            slot: list(self._instantiate_object(slot_filler, learner_semantics))
-            for (slot, slot_filler) in action_node.slot_fillings.items()
-        }
-        slot_order = tuple(slots_to_instantiations.keys())
 
         for action_template in self.action_learner.templates_for_concept(
             action_node.concept
         ):
+            # TODO: Handle instantiate objects returning no result from functional learner
+            # If that happens we should break from instantiating this utterance
+            slots_to_instantiations = {
+                slot: list(
+                    self._instantiate_object(
+                        slot_filler,
+                        learner_semantics,
+                        action_elements=action_template.elements,
+                        slot=slot,
+                    )
+                )
+                for (slot, slot_filler) in action_node.slot_fillings.items()
+            }
+            slot_order = tuple(slots_to_instantiations.keys())
+
             all_possible_slot_fillings = itertools.product(
                 *slots_to_instantiations.values()
             )

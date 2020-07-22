@@ -1670,29 +1670,48 @@ def _make_put_on_speaker_addressee_body_part_curriculum(
     )
 
 
-def make_drink_template(noise_objects: Optional[int]) -> Phase1SituationTemplate:
-    object_0 = standard_object(
-        "object_0",
-        required_properties=[HOLLOW],
-        banned_properties=[IS_SPEAKER, IS_ADDRESSEE],
-    )
-    liquid_0 = object_variable("liquid_0", required_properties=[LIQUID])
-    person_0 = standard_object(
-        "person_0", PERSON, banned_properties=[IS_SPEAKER, IS_ADDRESSEE]
-    )
+def make_drink_template(
+    agent: TemplateObjectVariable,
+    liquid: TemplateObjectVariable,
+    container: TemplateObjectVariable,
+    noise_objects: Optional[int],
+) -> Phase1SituationTemplate:
     background = make_noise_objects(noise_objects)
 
     return Phase1SituationTemplate(
         "drink",
-        salient_object_variables=[liquid_0, person_0],
+        salient_object_variables=[agent, liquid],
         background_object_variables=background,
         actions=[
             Action(
                 DRINK,
-                argument_roles_to_fillers=[(AGENT, person_0), (THEME, liquid_0)],
-                auxiliary_variable_bindings=[(DRINK_CONTAINER_AUX, object_0)],
+                argument_roles_to_fillers=[(AGENT, agent), (THEME, liquid)],
+                auxiliary_variable_bindings=[(DRINK_CONTAINER_AUX, container)],
             )
         ],
+    )
+
+
+def make_drink_from_template(
+    agent: TemplateObjectVariable,
+    liquid: TemplateObjectVariable,
+    container: TemplateObjectVariable,
+    noise_objects: Optional[int],
+) -> Phase1SituationTemplate:
+    background = make_noise_objects(noise_objects)
+
+    return Phase1SituationTemplate(
+        "drink-from",
+        salient_object_variables=[agent, liquid, container],
+        background_object_variables=background,
+        actions=[
+            Action(
+                DRINK,
+                argument_roles_to_fillers=[(AGENT, agent), (THEME, liquid)],
+                auxiliary_variable_bindings=[(DRINK_CONTAINER_AUX, container)],
+            )
+        ],
+        asserted_always_relations=[inside(liquid, container)],
     )
 
 
@@ -1703,22 +1722,39 @@ def _make_drink_curriculum(
         HighLevelSemanticsSituation, LinearizedDependencyTree
     ],
 ) -> Phase1InstanceGroup:
+    object_0 = standard_object(
+        "object_0",
+        required_properties=[HOLLOW, PERSON_CAN_HAVE],
+        banned_properties=[IS_SPEAKER, IS_ADDRESSEE],
+    )
+    liquid_0 = object_variable("liquid_0", required_properties=[LIQUID])
+    person_0 = standard_object(
+        "person_0", PERSON, banned_properties=[IS_SPEAKER, IS_ADDRESSEE]
+    )
     return phase1_instances(
         "drinking",
         chain(
             *[
                 sampled(
-                    make_drink_template(noise_objects),
+                    make_drink_template(person_0, liquid_0, object_0, noise_objects),
                     ontology=GAILA_PHASE_1_ONTOLOGY,
                     chooser=PHASE1_CHOOSER_FACTORY(),
                     max_to_sample=num_samples,
                 )
                 if num_samples
                 else all_possible(
-                    make_drink_template(noise_objects),
+                    make_drink_template(person_0, liquid_0, object_0, noise_objects),
                     ontology=GAILA_PHASE_1_ONTOLOGY,
                     chooser=PHASE1_CHOOSER_FACTORY(),
-                )
+                ),
+                sampled(
+                    make_drink_from_template(
+                        person_0, liquid_0, object_0, noise_objects=noise_objects
+                    ),
+                    ontology=GAILA_PHASE_1_ONTOLOGY,
+                    chooser=PHASE1_CHOOSER_FACTORY(),
+                    max_to_sample=num_samples if num_samples else 5,
+                ),
             ]
         ),
         language_generator=language_generator,

@@ -1,6 +1,7 @@
 import logging
 
-from typing import Tuple, Dict, Union
+from more_itertools import first
+from typing import Tuple, Dict, Union, Optional
 
 from attr.validators import instance_of
 
@@ -12,7 +13,7 @@ from adam.learner import (
     PerceptionSemanticAlignment,
 )
 from adam.learner.template_learner import TemplateLearner
-from adam.semantics import SemanticNode, SyntaxSemanticsVariable, LearnerSemantics
+from adam.semantics import SyntaxSemanticsVariable, LearnerSemantics
 
 
 # This class needs a better name?
@@ -22,9 +23,17 @@ class StringFunctionCounter:
     _num_instances_seen: int = attrib(init=False, default=0)
 
     def get_best_guess_token(self) -> Tuple[str, ...]:
+        def sort_by_counts(tok_to_count: Tuple[Tuple[str, ...], int]) -> int:
+            _, count = tok_to_count
+            return count
+
+        sorted_by_count = [(k, v) for k, v in self._tokens_to_count.items()]
+        sorted_by_count.sort(key=sort_by_counts, reverse=True)
+        toks, _ = first(sorted_by_count)
         # This should apply the tolerance principal to get the assumed token
         # If we don't know what the observation is
-        raise NotImplementedError
+        # But for now we just return the highest seen argument
+        return toks
 
     def add_example(self, tokens: Tuple[str, ...]) -> None:
         if tokens in self._tokens_to_count.keys():
@@ -43,6 +52,7 @@ class FunctionalLearner:
         Dict[SyntaxSemanticsVariable, StringFunctionCounter],
     ] = attrib(init=False)
 
+    # HACK to deal with determiners
     def _remove_determiners(self, input: Tuple[str, ...]) -> Tuple[str, ...]:
         return tuple(tok for tok in input if tok not in ["a", "the"])
 
@@ -111,4 +121,24 @@ class FunctionalLearner:
                         ].add_example(aligned_text)
 
     def describe(self, perception_semantic_alignment: PerceptionSemanticAlignment):
+        # The functional learner doesn't quite 'describe' in the same way
+        # as our other learners, rather it gets asked when needed to fill a slot
         raise NotImplementedError
+
+    def template_for_concept(
+        self,
+        action_elements: Tuple[Union[str, SyntaxSemanticsVariable], ...],
+        slot: SyntaxSemanticsVariable,
+    ) -> Optional[Tuple[str, ...]]:
+        if action_elements not in self._concept_elements_to_arguments_to_function_counter:
+            return None
+        if (
+            slot
+            not in self._concept_elements_to_arguments_to_function_counter[
+                action_elements
+            ]
+        ):
+            return None
+        return self._concept_elements_to_arguments_to_function_counter[action_elements][
+            slot
+        ].get_best_guess_token()

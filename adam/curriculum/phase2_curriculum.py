@@ -62,6 +62,7 @@ from adam.ontology.phase1_ontology import (
     PERSON,
     THEME,
     DRINK_CONTAINER_AUX,
+    inside,
 )
 from adam.ontology.phase1_spatial_relations import (
     Region,
@@ -206,7 +207,7 @@ def _make_drink_cups_curriculum(
         templates.append(
             Phase1SituationTemplate(
                 "drink-cup",
-                salient_object_variables=[liquid_0, person_0],
+                salient_object_variables=[liquid_0, person_0, cup_obj],
                 background_object_variables=make_noise_objects(noise_objects),
                 actions=[
                     Action(
@@ -215,6 +216,7 @@ def _make_drink_cups_curriculum(
                         auxiliary_variable_bindings=[(DRINK_CONTAINER_AUX, cup_obj)],
                     )
                 ],
+                asserted_always_relations=[inside(liquid_0, cup_obj)],
             )
         )
 

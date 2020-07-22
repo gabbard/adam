@@ -11,6 +11,8 @@ from adam.curriculum.phase1_curriculum import (
     _make_each_object_by_itself_curriculum,
     _make_put_on_speaker_addressee_body_part_curriculum,
     _make_generic_statements_curriculum,
+    _make_sit_curriculum,
+    _make_drink_curriculum,
 )
 from adam.curriculum.pursuit_curriculum import make_simple_pursuit_curriculum
 from adam.language.dependency import LinearizedDependencyTree
@@ -113,6 +115,19 @@ def build_pursuit_curriculum(
             perception_generator=GAILA_M6_PERCEPTION_GENERATOR,
             language_generator=language_generator,
         )
+    ]
+
+
+def build_functionally_defined_objects_train_curriculum(
+    num_samples: Optional[int],
+    num_noise_objects: Optional[int],
+    language_generator: LanguageGenerator[
+        HighLevelSemanticsSituation, LinearizedDependencyTree
+    ],
+) -> Sequence[Phase1InstanceGroup]:
+    return [
+        _make_sit_curriculum(num_samples, num_noise_objects, language_generator),
+        _make_drink_curriculum(num_samples, num_noise_objects, language_generator),
     ]
 
 
