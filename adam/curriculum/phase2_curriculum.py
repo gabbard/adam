@@ -38,6 +38,8 @@ from adam.curriculum.phase1_curriculum import (
     build_gaila_phase1_attribute_curriculum,
     build_gaila_generics_curriculum,
     build_gaila_phase1_verb_curriculum,
+    make_sit_transitive,
+    make_sit_template_intransitive,
 )
 from adam.curriculum.preposition_curriculum import make_prepositions_curriculum
 from adam.curriculum.verbs_with_dynamic_prepositions_curriculum import (
@@ -112,55 +114,13 @@ def _make_sit_on_chair_curriculum(
         )
         seat = standard_object("chair", chair_type)
         templates.append(
-            Phase1SituationTemplate(
-                f"sit-on-chair",
-                salient_object_variables=[sitter, seat],
-                background_object_variables=make_noise_objects(noise_objects),
-                actions=[
-                    Action(
-                        SIT,
-                        argument_roles_to_fillers=[
-                            (AGENT, sitter),
-                            (
-                                GOAL,
-                                Region(
-                                    seat,
-                                    direction=GRAVITATIONAL_UP,
-                                    distance=EXTERIOR_BUT_IN_CONTACT,
-                                ),
-                            ),
-                        ],
-                        auxiliary_variable_bindings=[(SIT_THING_SAT_ON, seat)],
-                    )
-                ],
-                constraining_relations=[],
-                syntax_hints=[IGNORE_COLORS],
+            make_sit_transitive(
+                sitter, seat, noise_objects, surface=False, syntax_hints=False
             )
         )
         templates.append(
-            Phase1SituationTemplate(
-                f"sit-intransitive",
-                salient_object_variables=[sitter],
-                background_object_variables=make_noise_objects(noise_objects),
-                actions=[
-                    Action(
-                        SIT,
-                        argument_roles_to_fillers=[(AGENT, sitter)],
-                        auxiliary_variable_bindings=[
-                            (
-                                SIT_GOAL,
-                                Region(
-                                    seat,
-                                    direction=GRAVITATIONAL_UP,
-                                    distance=EXTERIOR_BUT_IN_CONTACT,
-                                ),
-                            ),
-                            (SIT_THING_SAT_ON, seat),
-                        ],
-                    )
-                ],
-                constraining_relations=[],
-                syntax_hints=[IGNORE_COLORS],
+            make_sit_template_intransitive(
+                sitter, seat, noise_objects, surface=False, syntax_hints=False
             )
         )
 

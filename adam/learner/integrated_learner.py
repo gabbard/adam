@@ -29,6 +29,8 @@ from adam.semantics import (
     GROUND_OBJECT_CONCEPT,
     LearnerSemantics,
     SyntaxSemanticsVariable,
+    FunctionalObjectConcept,
+    ObjectConcept,
 )
 from attr import attrib, attrs
 from attr.validators import instance_of, optional
@@ -145,9 +147,7 @@ class IntegratedTemplateLearner(
 
             if self.functional_learner:
                 self.functional_learner.learn_from(
-                    current_learner_state,
-                    observation_num=observation_num,
-                    action_learner=self.action_learner,
+                    current_learner_state, observation_num=observation_num
                 )
 
     def describe(
@@ -174,6 +174,11 @@ class IntegratedTemplateLearner(
             cur_description_state = self.action_learner.enrich_during_description(
                 cur_description_state
             )
+
+            if self.functional_learner:
+                cur_description_state = self.functional_learner.enrich_during_description(
+                    cur_description_state
+                )
         return self._linguistic_descriptions_from_semantics(
             cur_description_state.semantic_nodes
         )
@@ -250,8 +255,7 @@ class IntegratedTemplateLearner(
         object_node: ObjectSemanticNode,
         learner_semantics: "LearnerSemantics",
         *,
-        action_elements: Optional[Tuple[Union[str, SyntaxSemanticsVariable], ...]] = None,
-        slot: Optional[SyntaxSemanticsVariable] = None
+        concept_mapping: Mapping[FunctionalObjectConcept, ObjectConcept] = immutabledict()
     ) -> Iterator[Tuple[str, ...]]:
 
         # For now, we assume the order in which modifiers is expressed is arbitrary.
@@ -268,7 +272,20 @@ class IntegratedTemplateLearner(
         # See https://github.com/isi-vista/adam/issues/794 .
         # relations_for_object = learner_semantics.objects_to_relation_in_slot1[object_node]
 
-        def apply_attributes(input_str: Tuple[str, ...]) -> Iterator[Tuple[str, ...]]:
+        if (
+            isinstance(object_node.concept, FunctionalObjectConcept)
+            and object_node.concept in concept_mapping.keys()
+        ):
+            concept = concept_mapping[object_node.concept]
+        else:
+            concept = object_node.concept
+
+        for template in self.object_learner.templates_for_concept(concept):
+
+            cur_string = template.instantiate(
+                template_variable_to_filler=immutabledict()
+            ).as_token_sequence()
+
             for num_attributes in range(
                 min(len(attributes_we_can_express), self._max_attributes_per_word)
             ):
@@ -287,34 +304,9 @@ class IntegratedTemplateLearner(
                             yield self._add_determiners(
                                 object_node,
                                 attribute_template.instantiate(
-                                    template_variable_to_filler={SLOT1: input_str}
+                                    template_variable_to_filler={SLOT1: cur_string}
                                 ).as_token_sequence(),
                             )
-
-        # Handle Recognizing Functional Objects
-        if (
-            self.functional_learner
-            and action_elements
-            and slot
-            and not self.object_learner.templates_for_concept(object_node.concept)
-        ):
-            cur_string = self.functional_learner.template_for_concept(
-                action_elements, slot
-            )
-
-            if cur_string:
-                for output in apply_attributes(cur_string):
-                    yield output
-                yield self._add_determiners(object_node, cur_string)
-
-        for template in self.object_learner.templates_for_concept(object_node.concept):
-
-            cur_string = template.instantiate(
-                template_variable_to_filler=immutabledict()
-            ).as_token_sequence()
-
-            for output in apply_attributes(cur_string):
-                yield output
 
             yield self._add_determiners(object_node, cur_string)
 
@@ -353,14 +345,7 @@ class IntegratedTemplateLearner(
             # TODO: Handle instantiate objects returning no result from functional learner
             # If that happens we should break from instantiating this utterance
             slots_to_instantiations = {
-                slot: list(
-                    self._instantiate_object(
-                        slot_filler,
-                        learner_semantics,
-                        action_elements=action_template.elements,
-                        slot=slot,
-                    )
-                )
+                slot: list(self._instantiate_object(slot_filler, learner_semantics))
                 for (slot, slot_filler) in action_node.slot_fillings.items()
             }
             slot_order = tuple(slots_to_instantiations.keys())
