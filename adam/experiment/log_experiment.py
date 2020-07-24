@@ -30,6 +30,7 @@ from adam.language.language_generator import LanguageGenerator
 from adam.language.language_utils import phase2_language_generator
 from adam.language_specific.english import ENGLISH_DETERMINERS
 from adam.learner.attributes import SubsetAttributeLearner, SubsetAttributeLearnerNew
+from adam.learner.functional_learner import FunctionalLearner
 from adam.learner.integrated_learner import IntegratedTemplateLearner
 from adam.learner.language_mode import LanguageMode
 from adam.learner.relations import SubsetRelationLearnerNew
@@ -216,6 +217,7 @@ def learner_factory_from_params(
                 beam_size=beam_size,
                 language_mode=language_mode,
             ),
+            functional_learner=FunctionalLearner(language_mode=language_mode),
         )
     elif learner_type == "integrated-learner-recognizer":
         return lambda: IntegratedTemplateLearner(
@@ -237,6 +239,7 @@ def learner_factory_from_params(
                 beam_size=beam_size,
                 language_mode=language_mode,
             ),
+            functional_learner=FunctionalLearner(language_mode=language_mode),
         )
     else:
         raise RuntimeError("can't happen")
