@@ -342,7 +342,10 @@ def _make_plural_objects_curriculum(  # pylint: disable=unused-argument
         for object_type in PHASE_1_CURRICULUM_OBJECTS:
             is_liquid = ontology.has_all_properties(object_type, [LIQUID])
             # don't want multiples of named people
-            if not is_recognized_particular(ontology, object_type) and not is_liquid:
+            if (
+                not is_recognized_particular(ontology, object_type)
+                and not is_liquid
+            ):
                 for _ in range(samples_per_object):
                     num_objects = chooser.choice(range(2, 4))
                     yield HighLevelSemanticsSituation(
@@ -636,7 +639,55 @@ def _make_my_your_object_curriculum(
         HighLevelSemanticsSituation, LinearizedDependencyTree
     ],
 ) -> Phase1InstanceGroup:
-    person_0 = standard_object(
+    all_possible_people = [BABY, MOM, DAD]
+    inanimate_object = standard_object(
+        "object", INANIMATE_OBJECT, required_properties=[PERSON_CAN_HAVE]
+    )
+    background_noise = make_noise_objects(noise_objects)
+    def get_your_speakers(person : OntologyNode) -> TemplateObjectVariable:
+        all_possible = [standard_object("speaker", possible_person, added_properties=[IS_SPEAKER]) for possible_person in all_possible_people if possible_person != person]
+        return PHASE1_CHOOSER_FACTORY().choice(all_possible)
+
+    return phase1_instances(
+        "my-your-object",
+        chain(
+            *[
+                sampled(
+                    _x_has_y_template(
+                        person,
+                        inanimate_object,
+                        background= background_noise,
+                        syntax_hints=[IGNORE_HAS_AS_VERB],
+                    ),
+                    chooser=PHASE1_CHOOSER_FACTORY(),
+                    ontology=GAILA_PHASE_1_ONTOLOGY,
+                    max_to_sample=num_samples if num_samples else 20,
+                )
+                for person in [standard_object("speaker", p, added_properties=[IS_SPEAKER]) for p in all_possible_people]
+            ],
+            *[
+                sampled(
+                    _x_has_y_template(
+                        standard_object("addressee", person, added_properties=[IS_ADDRESSEE]),
+                        inanimate_object,
+                        background=chain(background_noise, [speaker]),
+                        syntax_hints=[IGNORE_HAS_AS_VERB],
+                    ),
+                    chooser=PHASE1_CHOOSER_FACTORY(),
+                    ontology=GAILA_PHASE_1_ONTOLOGY,
+                    max_to_sample=num_samples if num_samples else 20,
+                )
+                for person in all_possible_people
+                for speaker in get_your_speakers(person)
+            ]
+        ),
+        language_generator=language_generator,
+
+    )
+
+
+
+    """person_0 = standard_object(
         "speaker",
         PERSON,
         banned_properties=[IS_SPEAKER, IS_ADDRESSEE],
@@ -648,6 +699,7 @@ def _make_my_your_object_curriculum(
         banned_properties=[IS_SPEAKER, IS_ADDRESSEE],
         added_properties=[IS_ADDRESSEE],
     )
+
     inanimate_object = standard_object(
         "object", INANIMATE_OBJECT, required_properties=[PERSON_CAN_HAVE]
     )
@@ -664,7 +716,7 @@ def _make_my_your_object_curriculum(
                     _x_has_y_template(
                         person,
                         inanimate_object,
-                        background=chain([person_0], background_noise)
+                        background=chain([speaker_for_you], background_noise)
                         if person == person_1
                         else background_noise,
                         syntax_hints=[IGNORE_HAS_AS_VERB],
@@ -677,7 +729,7 @@ def _make_my_your_object_curriculum(
             ]
         ),
         language_generator=language_generator,
-    )
+    )"""
 
 
 def falling_template(

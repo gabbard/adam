@@ -395,12 +395,19 @@ def build_gaila_m13_curriculum(
                         num_samples, num_noise_objects, language_generator
                     )
                 ),
+                make_verb_with_dynamic_prepositions_curriculum(
+                    num_samples, num_noise_objects, language_generator
+                ),
                 list(
                     make_subtle_verb_distinctions_curriculum(
                         num_samples, num_noise_objects, language_generator
                     )
                 ),
                 build_functionally_defined_objects_curriculum(
+                    num_samples, num_noise_objects, language_generator
+                ),
+                #TODO: this is currently at the end because there are issues with over-matching to plurals
+                build_gaila_plurals_curriculum(
                     num_samples, num_noise_objects, language_generator
                 ),
             )

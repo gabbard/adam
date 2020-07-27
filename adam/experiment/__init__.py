@@ -181,6 +181,7 @@ def execute_experiment(
         ) in training_stage.instances():
             num_observations += 1
 
+
             # don't learn from anything until we've reached the starting of the the learning
             if num_observations < starting_point:
                 continue
