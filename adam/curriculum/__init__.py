@@ -237,7 +237,7 @@ class ParallelGeneratedFromSituationsInstanceGroup(
     @staticmethod
     def all_perceptual_representations(input_: "ParallelGeneratedFromSituationsInstanceGroup._PerceptionGenerationInputs")\
             -> Iterable[PerceptionT]:
-        return [input_.perception_generator.generate_perception(input_.situation, input_.chooser)]
+        yield from (input_.perception_generator.generate_perception(input_.situation, input_.chooser),)
 
     def instances(
             self
@@ -250,17 +250,16 @@ class ParallelGeneratedFromSituationsInstanceGroup(
     ]:
         pool = mp.Pool(self._SUBPROCESS_POOL_SIZE)
 
-        results = []
-        for situation in self._situations:
-            language_input = self._LanguageGenerationInputs(situation, self._language_generator, self._chooser)
-            linguistic_descriptions = pool.apply(self.all_linguistic_descriptions, (language_input,))
+        all_linguistic_descriptions = pool.imap(self.all_linguistic_descriptions, [
+            self._LanguageGenerationInputs(situation, self._language_generator, self._chooser) for situation in self._situations
+        ])
+        all_perceptual_representations = pool.imap(self.all_linguistic_descriptions, [
+            self._PerceptionGenerationInputs(situation, self._perception_generator, self._chooser) for situation in self._situations
+        ])
 
-            perception_input = self._PerceptionGenerationInputs(situation, self._perception_generator, self._chooser)
-            perceptual_representations = pool.apply(self.all_perceptual_representations, (perception_input,))
-
-            results.append((situation, linguistic_descriptions, perceptual_representations))
-
-        for situation, linguistic_descriptions, perceptual_representations in results:
+        for situation, linguistic_descriptions, perceptual_representations in zip(
+            self._situations, all_linguistic_descriptions, all_perceptual_representations
+        ):
             for linguistic_description in linguistic_descriptions:
                 for perceptual_representation in perceptual_representations:
                     yield (
