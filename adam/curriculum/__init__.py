@@ -216,7 +216,7 @@ class ParallelGeneratedFromSituationsInstanceGroup(
     @attrs
     class _LanguageGenerationInputs:
         situation: SituationT = attrib()
-        _language_generator: LanguageGenerator[SituationT, LinguisticDescriptionT] = attrib(
+        language_generator: LanguageGenerator[SituationT, LinguisticDescriptionT] = attrib(
             validator=instance_of(LanguageGenerator)
         )
         chooser = attrib(validator=instance_of(SequenceChooser))
@@ -229,6 +229,16 @@ class ParallelGeneratedFromSituationsInstanceGroup(
         ] = attrib(validator=instance_of(PerceptualRepresentationGenerator))
         chooser = attrib(validator=instance_of(SequenceChooser))
 
+    @staticmethod
+    def all_linguistic_descriptions(input_: "ParallelGeneratedFromSituationsInstanceGroup._LanguageGenerationInputs")\
+            -> Iterable[LinguisticDescriptionT]:
+        yield from input_.language_generator.generate_language(input_.situation, input_.chooser)
+
+    @staticmethod
+    def all_perceptual_representations(input_: "ParallelGeneratedFromSituationsInstanceGroup._PerceptionGenerationInputs")\
+            -> Iterable[PerceptionT]:
+        return [input_.perception_generator.generate_perception(input_.situation, input_.chooser)]
+
     def instances(
             self
     ) -> Iterable[
@@ -240,19 +250,13 @@ class ParallelGeneratedFromSituationsInstanceGroup(
     ]:
         pool = mp.Pool(self._SUBPROCESS_POOL_SIZE)
 
-        def all_linguistic_descriptions(input_: ParallelGeneratedFromSituationsInstanceGroup._LanguageGenerationInputs):
-            yield from input_.language_generator.generate_language(input_.situation, input_.chooser)
-
-        def all_perceptual_representations(input_: ParallelGeneratedFromSituationsInstanceGroup._PerceptionGenerationInputs):
-            return [input_.perception_generator.generate_perception(input_.situation, input_.chooser)]
-
         results = []
         for situation in self._situations:
             language_input = self._LanguageGenerationInputs(situation, self._language_generator, self._chooser)
-            linguistic_descriptions = pool.apply(all_linguistic_descriptions, (language_input,))
+            linguistic_descriptions = pool.apply(self.all_linguistic_descriptions, (language_input,))
 
             perception_input = self._PerceptionGenerationInputs(situation, self._perception_generator, self._chooser)
-            perceptual_representations = pool.apply(all_perceptual_representations, (perception_input,))
+            perceptual_representations = pool.apply(self.all_perceptual_representations, (perception_input,))
 
             results.append((situation, linguistic_descriptions, perceptual_representations))
 
