@@ -232,12 +232,12 @@ class ParallelGeneratedFromSituationsInstanceGroup(
     @staticmethod
     def all_linguistic_descriptions(input_: "ParallelGeneratedFromSituationsInstanceGroup._LanguageGenerationInputs")\
             -> Iterable[LinguisticDescriptionT]:
-        yield from input_.language_generator.generate_language(input_.situation, input_.chooser)
+        return list(input_.language_generator.generate_language(input_.situation, input_.chooser))
 
     @staticmethod
     def all_perceptual_representations(input_: "ParallelGeneratedFromSituationsInstanceGroup._PerceptionGenerationInputs")\
-            -> Iterable[PerceptionT]:
-        yield from (input_.perception_generator.generate_perception(input_.situation, input_.chooser),)
+            -> Iterable[PerceptualRepresentation[PerceptionT]]:
+        return [input_.perception_generator.generate_perception(input_.situation, input_.chooser)]
 
     def instances(
             self
