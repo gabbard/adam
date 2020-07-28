@@ -3,10 +3,12 @@ Code to specify what is shown to `LanguageLearner`\ s and in what order.
 """
 from abc import ABC, abstractmethod
 from typing import Generic, Iterable, Optional, Tuple, List
+import multiprocessing as mp
 
 from attr import attrib, attrs
 from attr.validators import instance_of
 from immutablecollections.converter_utils import _to_tuple
+from more_itertools import flatten
 
 from adam.language import LinguisticDescriptionT
 from adam.language.language_generator import LanguageGenerator
@@ -168,3 +170,86 @@ class GeneratedFromSituationsInstanceGroup(
                         situation, self._chooser
                     ),
                 )
+
+
+@attrs(frozen=True, slots=True)
+class ParallelGeneratedFromSituationsInstanceGroup(
+    InstanceGroup[SituationT, LinguisticDescriptionT, PerceptionT]
+):
+    r"""
+    Creates a collection of instances
+    by taking an iterable of `Situation`\ s
+    and deriving the `LinguisticDescription`\ s and `PerceptualRepresentation`\ s
+    by applying the *language_generator* and *perception_generator*, respectively,
+    using a process pool for parallelism.
+    """
+    _name: str = attrib(validator=instance_of(str))
+    """
+    The name of the instance group.
+    """
+    _situations: Tuple[SituationT, ...] = attrib(converter=_to_tuple)
+    r"""
+    The sequence of `Situation`\ s to derive linguistic and perceptual representations from for
+    training.
+
+    These `Situation`\ s could themselves be produced by `SituationTemplate`\ s.
+    """
+    _language_generator: LanguageGenerator[SituationT, LinguisticDescriptionT] = attrib(
+        validator=instance_of(LanguageGenerator)
+    )
+    """
+    How to generate the `LanguageRepresentation` of a training `Situation`.
+    """
+    _perception_generator: PerceptualRepresentationGenerator[
+        SituationT, PerceptionT
+    ] = attrib(validator=instance_of(PerceptualRepresentationGenerator))
+    """
+    How to generate the `PerceptualRepresentation` of a training `Situation`
+    """
+    _chooser: SequenceChooser = attrib(validator=instance_of(SequenceChooser))
+
+    _SUBPROCESS_POOL_SIZE: int = mp.cpu_count() - 1
+
+    def name(self) -> str:
+        return self._name
+
+    def _instances_of_situation(self, situation: SituationT) -> Tuple[
+        SituationT, LinguisticDescriptionT, PerceptionT
+    ]:
+        # suppress PyCharm type inference bug
+        # noinspection PyTypeChecker
+        perception = self._perception_generator.generate_perception(situation, self.chooser)
+        for linguistic_description in self._language_generator.generate_language(
+                situation, self._chooser
+        ):
+            yield (
+                situation,
+                linguistic_description,
+                perception,
+            )
+
+    def instances(
+            self
+    ) -> Iterable[
+        Tuple[
+            Optional[SituationT],
+            LinguisticDescriptionT,
+            PerceptualRepresentation[PerceptionT],
+        ]
+    ]:
+        pool = mp.Pool(self._SUBPROCESS_POOL_SIZE)
+        for generator in pool.imap(
+                self._instances_of_situation, self._situations
+        ):
+            yield from generator
+
+        # for situation in self._situations:
+        #     perception = self._perception_generator.generate_perception(situation, self.chooser)
+        #     for linguistic_description in self._language_generator.generate_language(
+        #             situation, self._chooser
+        #     ):
+        #         yield (
+        #             situation,
+        #             linguistic_description,
+        #             perception,
+        #         )

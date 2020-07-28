@@ -3,7 +3,8 @@ from adam.ontology import IS_SPEAKER, IS_ADDRESSEE
 from immutablecollections import immutableset
 from adam.language.language_generator import LanguageGenerator
 from adam.language.dependency import LinearizedDependencyTree
-from adam.curriculum import InstanceGroup, GeneratedFromSituationsInstanceGroup
+from adam.curriculum import InstanceGroup, GeneratedFromSituationsInstanceGroup, \
+    ParallelGeneratedFromSituationsInstanceGroup
 from adam.language_specific.english.english_language_generator import (
     GAILA_PHASE_1_LANGUAGE_GENERATOR,
     GAILA_PHASE_2_LANGUAGE_GENERATOR,
@@ -100,18 +101,29 @@ def phase1_instances(
     language_generator: LanguageGenerator[
         HighLevelSemanticsSituation, LinearizedDependencyTree
     ] = GAILA_PHASE_1_LANGUAGE_GENERATOR,
+    *,
+    in_parallel=False,
 ) -> Phase1InstanceGroup:
     """
     Convenience method for more compactly creating sub-curricula for phase 1.
     """
 
-    return GeneratedFromSituationsInstanceGroup(
-        description,
-        situations=situations,
-        language_generator=language_generator,
-        perception_generator=perception_generator,
-        chooser=PHASE1_CHOOSER_FACTORY(),
-    )
+    if in_parallel:
+        return ParallelGeneratedFromSituationsInstanceGroup(
+            description,
+            situations=situations,
+            language_generator=language_generator,
+            perception_generator=perception_generator,
+            chooser=PHASE1_CHOOSER_FACTORY(),
+        )
+    else:
+        return GeneratedFromSituationsInstanceGroup(
+            description,
+            situations=situations,
+            language_generator=language_generator,
+            perception_generator=perception_generator,
+            chooser=PHASE1_CHOOSER_FACTORY(),
+        )
 
 
 def phase2_instances(
