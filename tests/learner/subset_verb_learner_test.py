@@ -110,7 +110,7 @@ def run_verb_test(learner, situation_template, language_generator):
             ]
         ),
         language_generator=language_generator,
-        parallel=True,
+        in_parallel=True,
     )
     test_curriculum = phase1_instances(
         "test",
@@ -125,7 +125,7 @@ def run_verb_test(learner, situation_template, language_generator):
             ]
         ),
         language_generator=language_generator,
-        parallel=True,
+        in_parallel=True,
     )
 
     for (
@@ -510,7 +510,7 @@ def test_throw_animacy(language_mode, learner):
             ]
         ),
         language_generator=phase1_language_generator(language_mode),
-        parallel=True,
+        in_parallel=True,
     )
     # shuffle both together for test curriculum
     test_curriculum = phase1_instances(
@@ -527,7 +527,7 @@ def test_throw_animacy(language_mode, learner):
             ]
         ),
         language_generator=phase1_language_generator(language_mode),
-        parallel=True,
+        in_parallel=True,
     )
     # instantiate and test the learner
     learner = learner(language_mode)
