@@ -213,20 +213,21 @@ class ParallelGeneratedFromSituationsInstanceGroup(
     def name(self) -> str:
         return self._name
 
-    def _instances_of_situation(self, situation: SituationT) -> Tuple[
-        SituationT, LinguisticDescriptionT, PerceptionT
-    ]:
-        # suppress PyCharm type inference bug
-        # noinspection PyTypeChecker
-        perception = self._perception_generator.generate_perception(situation, self.chooser)
-        for linguistic_description in self._language_generator.generate_language(
-                situation, self._chooser
-        ):
-            yield (
-                situation,
-                linguistic_description,
-                perception,
-            )
+    @attrs
+    class _LanguageGenerationInputs:
+        situation: SituationT = attrib()
+        _language_generator: LanguageGenerator[SituationT, LinguisticDescriptionT] = attrib(
+            validator=instance_of(LanguageGenerator)
+        )
+        chooser = attrib(validator=instance_of(SequenceChooser))
+
+    @attrs
+    class _PerceptionGenerationInputs:
+        situation: SituationT = attrib()
+        perception_generator: PerceptualRepresentationGenerator[
+            SituationT, PerceptionT
+        ] = attrib(validator=instance_of(PerceptualRepresentationGenerator))
+        chooser = attrib(validator=instance_of(SequenceChooser))
 
     def instances(
             self
@@ -238,18 +239,28 @@ class ParallelGeneratedFromSituationsInstanceGroup(
         ]
     ]:
         pool = mp.Pool(self._SUBPROCESS_POOL_SIZE)
-        for generator in pool.imap(
-                self._instances_of_situation, self._situations
-        ):
-            yield from generator
 
-        # for situation in self._situations:
-        #     perception = self._perception_generator.generate_perception(situation, self.chooser)
-        #     for linguistic_description in self._language_generator.generate_language(
-        #             situation, self._chooser
-        #     ):
-        #         yield (
-        #             situation,
-        #             linguistic_description,
-        #             perception,
-        #         )
+        def all_linguistic_descriptions(input_: ParallelGeneratedFromSituationsInstanceGroup._LanguageGenerationInputs):
+            yield from input_.language_generator.generate_language(input_.situation, input_.chooser)
+
+        def all_perceptual_representations(input_: ParallelGeneratedFromSituationsInstanceGroup._PerceptionGenerationInputs):
+            return [input_.perception_generator.generate_perception(input_.situation, input_.chooser)]
+
+        results = []
+        for situation in self._situations:
+            language_input = self._LanguageGenerationInputs(situation, self._language_generator, self._chooser)
+            linguistic_descriptions = pool.apply(all_linguistic_descriptions, (language_input,))
+
+            perception_input = self._PerceptionGenerationInputs(situation, self._perception_generator, self._chooser)
+            perceptual_representations = pool.apply(all_perceptual_representations, (perception_input,))
+
+            results.append((situation, linguistic_descriptions, perceptual_representations))
+
+        for situation, linguistic_descriptions, perceptual_representations in results:
+            for linguistic_description in linguistic_descriptions:
+                for perceptual_representation in perceptual_representations:
+                    yield (
+                        situation,
+                        linguistic_description,
+                        perceptual_representation,
+                    )
