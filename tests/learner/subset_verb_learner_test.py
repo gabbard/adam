@@ -125,7 +125,7 @@ def run_verb_test(learner, situation_template, language_generator):
             ]
         ),
         language_generator=language_generator,
-        in_parallel=True,
+        in_parallel=False,
     )
 
     for (
@@ -527,7 +527,7 @@ def test_throw_animacy(language_mode, learner):
             ]
         ),
         language_generator=phase1_language_generator(language_mode),
-        in_parallel=True,
+        in_parallel=False,
     )
     # instantiate and test the learner
     learner = learner(language_mode)
