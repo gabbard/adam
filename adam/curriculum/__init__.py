@@ -253,7 +253,7 @@ class ParallelGeneratedFromSituationsInstanceGroup(
         all_linguistic_descriptions = pool.imap(self.all_linguistic_descriptions, [
             self._LanguageGenerationInputs(situation, self._language_generator, self._chooser) for situation in self._situations
         ])
-        all_perceptual_representations = pool.imap(self.all_linguistic_descriptions, [
+        all_perceptual_representations = pool.imap(self.all_perceptual_representations, [
             self._PerceptionGenerationInputs(situation, self._perception_generator, self._chooser) for situation in self._situations
         ])
 
