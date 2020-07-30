@@ -208,7 +208,8 @@ class ParallelGeneratedFromSituationsInstanceGroup(
     """
     _chooser: SequenceChooser = attrib(validator=instance_of(SequenceChooser))
 
-    _SUBPROCESS_POOL_SIZE: int = mp.cpu_count() - 1
+    # _SUBPROCESS_POOL_SIZE: int = 1  # mp.cpu_count() - 1
+    _SUBPROCESS_POOL_SIZE: int = 1
 
     def name(self) -> str:
         return self._name
@@ -248,14 +249,14 @@ class ParallelGeneratedFromSituationsInstanceGroup(
             PerceptualRepresentation[PerceptionT],
         ]
     ]:
-        pool = mp.Pool(self._SUBPROCESS_POOL_SIZE)
+        import pickle
 
-        all_linguistic_descriptions = pool.imap(self.all_linguistic_descriptions, [
-            self._LanguageGenerationInputs(situation, self._language_generator, self._chooser) for situation in self._situations
-        ])
-        all_perceptual_representations = pool.imap(self.all_perceptual_representations, [
-            self._PerceptionGenerationInputs(situation, self._perception_generator, self._chooser) for situation in self._situations
-        ])
+        all_linguistic_descriptions = map(lambda x: pickle.loads(pickle.dumps(x)), map(self.all_linguistic_descriptions, [
+            pickle.loads(pickle.dumps(self._LanguageGenerationInputs(situation, self._language_generator, self._chooser))) for situation in self._situations
+        ]))
+        all_perceptual_representations = map(lambda x: pickle.loads(pickle.dumps(x)), map(self.all_perceptual_representations, [
+            pickle.loads(pickle.dumps(self._PerceptionGenerationInputs(situation, self._perception_generator, self._chooser))) for situation in self._situations
+        ]))
 
         for situation, linguistic_descriptions, perceptual_representations in zip(
             self._situations, all_linguistic_descriptions, all_perceptual_representations
