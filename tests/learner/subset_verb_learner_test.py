@@ -238,9 +238,9 @@ def test_eat_simple(language_mode, learner):
         required_properties=[ANIMATE],
         banned_properties=[IS_SPEAKER, IS_ADDRESSEE],
     )
-    run_verb_test(
+    run_verb_test_parallel(
         learner(language_mode),
-        make_eat_template(eater, object_to_eat),
+        [make_eat_template(eater, object_to_eat)],
         language_generator=phase1_language_generator(language_mode),
     )
 
@@ -266,9 +266,9 @@ def test_drink(language_mode, learner):
     person_0 = standard_object(
         "person_0", PERSON, banned_properties=[IS_SPEAKER, IS_ADDRESSEE]
     )
-    run_verb_test(
+    run_verb_test_parallel(
         learner(language_mode),
-        make_drink_template(person_0, liquid_0, object_0, None),
+        [make_drink_template(person_0, liquid_0, object_0, None)],
         language_generator=phase1_language_generator(language_mode),
     )
 
@@ -285,12 +285,11 @@ def test_drink(language_mode, learner):
     ],
 )
 def test_sit(language_mode, learner):
-    for situation_template in make_sit_templates(None):
-        run_verb_test(
-            learner(language_mode),
-            situation_template,
-            language_generator=phase1_language_generator(language_mode),
-        )
+    run_verb_test_parallel(
+        learner(language_mode),
+        make_sit_templates(None),
+        language_generator=phase1_language_generator(language_mode),
+    )
 
 
 @pytest.mark.parametrize("language_mode", [LanguageMode.ENGLISH, LanguageMode.CHINESE])
@@ -305,12 +304,11 @@ def test_sit(language_mode, learner):
     ],
 )
 def test_put(language_mode, learner):
-    for situation_template in make_put_templates(None):
-        run_verb_test(
-            learner(language_mode),
-            situation_template,
-            language_generator=phase1_language_generator(language_mode),
-        )
+    run_verb_test_parallel(
+        learner(language_mode),
+        make_put_templates(None),
+        language_generator=phase1_language_generator(language_mode),
+    )
 
 
 @pytest.mark.parametrize("language_mode", [LanguageMode.ENGLISH, LanguageMode.CHINESE])
@@ -325,7 +323,7 @@ def test_put(language_mode, learner):
     ],
 )
 def test_push(language_mode, learner):
-    for situation_template in make_push_templates(
+    push_templates = make_push_templates(
         agent=standard_object(
             "pusher",
             THING,
@@ -338,12 +336,12 @@ def test_push(language_mode, learner):
         ),
         push_goal=standard_object("push_goal", INANIMATE_OBJECT),
         use_adverbial_path_modifier=False,
-    ):
-        run_verb_test(
-            learner(language_mode),
-            situation_template,
-            language_generator=phase1_language_generator(language_mode),
-        )
+    )
+    run_verb_test_parallel(
+        learner(language_mode),
+        push_templates,
+        language_generator=phase1_language_generator(language_mode),
+    )
 
 
 @pytest.mark.parametrize("language_mode", [LanguageMode.ENGLISH, LanguageMode.CHINESE])
@@ -368,19 +366,17 @@ def test_go(language_mode, learner):
         for is_distal in (True, False)
     ]
 
-    for situation_template in make_go_templates(None):
-        run_verb_test(
-            learner(language_mode),
-            situation_template,
-            language_generator=phase1_language_generator(language_mode),
-        )
+    run_verb_test_parallel(
+        learner(language_mode),
+        make_go_templates(None),
+        language_generator=phase1_language_generator(language_mode)
+    )
 
-    for situation_template in under_templates:
-        run_verb_test(
-            learner(language_mode),
-            situation_template,
-            language_generator=phase1_language_generator(language_mode),
-        )
+    run_verb_test_parallel(
+        learner(language_mode),
+        under_templates,
+        language_generator=phase1_language_generator(language_mode)
+    )
 
 
 @pytest.mark.parametrize("language_mode", [LanguageMode.ENGLISH, LanguageMode.CHINESE])
@@ -433,17 +429,17 @@ def test_come(language_mode, learner):
             Action(COME, argument_roles_to_fillers=[(AGENT, movee), (GOAL, object_)])
         ],
     )
-    for situation_template in [
+    come_templates = [
         _make_come_down_template(movee, object_, speaker, ground, immutableset()),
         come_to_speaker,
         come_to_learner,
         come_to_object,
-    ]:
-        run_verb_test(
-            learner(language_mode),
-            situation_template,
-            language_generator=phase1_language_generator(language_mode),
-        )
+    ]
+    run_verb_test_parallel(
+        learner(language_mode),
+        come_templates,
+        language_generator=phase1_language_generator(language_mode),
+    )
 
 
 @pytest.mark.parametrize("language_mode", [LanguageMode.ENGLISH, LanguageMode.CHINESE])
@@ -458,13 +454,13 @@ def test_come(language_mode, learner):
     ],
 )
 def test_take(language_mode, learner):
-    run_verb_test(
+    run_verb_test_parallel(
         learner(language_mode),
-        make_take_template(
+        [make_take_template(
             agent=standard_object("taker_0", THING, required_properties=[ANIMATE]),
             theme=standard_object("object_taken_0", required_properties=[INANIMATE]),
             use_adverbial_path_modifier=False,
-        ),
+        )],
         language_generator=phase1_language_generator(language_mode),
     )
 
@@ -481,12 +477,11 @@ def test_take(language_mode, learner):
     ],
 )
 def test_give(language_mode, learner):
-    for situation_template in make_give_templates(immutableset()):
-        run_verb_test(
-            learner(language_mode),
-            situation_template,
-            language_generator=phase1_language_generator(language_mode),
-        )
+    run_verb_test_parallel(
+        learner(language_mode),
+        make_give_templates(immutableset()),
+        language_generator=phase1_language_generator(language_mode),
+    )
 
 
 @pytest.mark.parametrize("language_mode", [LanguageMode.ENGLISH, LanguageMode.CHINESE])
@@ -501,12 +496,11 @@ def test_give(language_mode, learner):
     ],
 )
 def test_spin(language_mode, learner):
-    for situation_template in make_spin_templates(None):
-        run_verb_test(
-            learner(language_mode),
-            situation_template,
-            language_generator=phase1_language_generator(language_mode),
-        )
+    run_verb_test(
+        learner(language_mode),
+        make_spin_templates(None),
+        language_generator=phase1_language_generator(language_mode),
+    )
 
 
 @pytest.mark.parametrize("language_mode", [LanguageMode.ENGLISH, LanguageMode.CHINESE])
@@ -521,12 +515,11 @@ def test_spin(language_mode, learner):
     ],
 )
 def test_fall(language_mode, learner):
-    for situation_template in make_fall_templates(immutableset()):
-        run_verb_test(
-            learner(language_mode),
-            situation_template,
-            language_generator=phase1_language_generator(language_mode),
-        )
+    run_verb_test_parallel(
+        learner(language_mode),
+        make_fall_templates(immutableset()),
+        language_generator=phase1_language_generator(language_mode),
+    )
 
 
 @pytest.mark.parametrize("language_mode", [LanguageMode.ENGLISH, LanguageMode.CHINESE])
@@ -541,12 +534,11 @@ def test_fall(language_mode, learner):
     ],
 )
 def test_throw(language_mode, learner):
-    for situation_template in make_throw_templates(None):
-        run_verb_test(
-            learner(language_mode),
-            situation_template,
-            language_generator=phase1_language_generator(language_mode),
-        )
+    run_verb_test_parallel(
+        learner(language_mode),
+        make_throw_templates(None),
+        language_generator=phase1_language_generator(language_mode),
+    )
 
 
 @pytest.mark.parametrize(
@@ -565,6 +557,7 @@ def test_throw(language_mode, learner):
 )
 # this tests gei vs. dau X shang for Chinese throw to
 # TODO: fix English implementation https://github.com/isi-vista/adam/issues/870
+# Not yet parallelized.
 def test_throw_animacy(language_mode, learner):
     # shuffle both together for the train curriculum
     train_curriculum = phase1_instances(
@@ -632,12 +625,11 @@ def test_throw_animacy(language_mode, learner):
     ],
 )
 def test_move(language_mode, learner):
-    for situation_template in make_move_templates(None):
-        run_verb_test(
-            learner(language_mode),
-            situation_template,
-            language_generator=phase1_language_generator(language_mode),
-        )
+    run_verb_test_parallel(
+        learner(language_mode),
+        make_move_templates(None),
+        language_generator=phase1_language_generator(language_mode),
+    )
 
 
 @pytest.mark.parametrize("language_mode", [LanguageMode.ENGLISH, LanguageMode.CHINESE])
@@ -663,19 +655,17 @@ def test_jump(language_mode, learner):
         "jumped_over", banned_properties=[IS_SPEAKER, IS_ADDRESSEE]
     )
 
-    for situation_template in make_jump_templates(None):
+    run_verb_test_parallel(
+        learner(language_mode),
+        make_jump_templates(None),
+        language_generator=phase1_language_generator(language_mode),
+    )
 
-        run_verb_test(
-            learner(language_mode),
-            situation_template,
-            language_generator=phase1_language_generator(language_mode),
-        )
-    for situation_template in [_jump_over_template(jumper, jumped_over, immutableset())]:
-        run_verb_test(
-            learner(language_mode),
-            situation_template,
-            language_generator=phase1_language_generator(language_mode),
-        )
+    run_verb_test_parallel(
+        learner(language_mode),
+        [_jump_over_template(jumper, jumped_over, immutableset())],
+        language_generator=phase1_language_generator(language_mode),
+    )
 
 
 @pytest.mark.parametrize("language_mode", [LanguageMode.ENGLISH, LanguageMode.CHINESE])
@@ -690,12 +680,11 @@ def test_jump(language_mode, learner):
     ],
 )
 def test_roll(language_mode, learner):
-    for situation_template in make_roll_templates(None):
-        run_verb_test(
-            learner(language_mode),
-            situation_template,
-            language_generator=phase1_language_generator(language_mode),
-        )
+    run_verb_test_parallel(
+        learner(language_mode),
+        make_roll_templates(None),
+        language_generator=phase1_language_generator(language_mode),
+    )
 
 
 @pytest.mark.parametrize("language_mode", [LanguageMode.ENGLISH, LanguageMode.CHINESE])
@@ -710,9 +699,8 @@ def test_roll(language_mode, learner):
     ],
 )
 def test_fly(language_mode, learner):
-    for situation_template in make_fly_templates(immutableset()):
-        run_verb_test(
-            learner(language_mode),
-            situation_template,
-            phase1_language_generator(language_mode),
-        )
+    run_verb_test_parallel(
+        learner(language_mode),
+        make_fly_templates(immutableset()),
+        phase1_language_generator(language_mode),
+    )
