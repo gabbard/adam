@@ -1,3 +1,5 @@
+import multiprocessing as mp
+import logging
 from itertools import chain
 
 import pytest
@@ -96,8 +98,8 @@ def integrated_learner_factory(language_mode: LanguageMode):
 #     )  # type: ignore
 
 
-def run_verb_test(learner, situation_template, language_generator):
-    train_curriculum = phase1_instances(
+def _train_curriculum(situation_template, language_generator):
+    return phase1_instances(
         "train",
         chain(
             *[
@@ -111,7 +113,10 @@ def run_verb_test(learner, situation_template, language_generator):
         ),
         language_generator=language_generator,
     )
-    test_curriculum = phase1_instances(
+
+
+def _test_curriculum(situation_template, language_generator):
+    return phase1_instances(
         "test",
         chain(
             *[
@@ -126,24 +131,92 @@ def run_verb_test(learner, situation_template, language_generator):
         language_generator=language_generator,
     )
 
-    for (
-        _,
-        linguistic_description,
-        perceptual_representation,
-    ) in train_curriculum.instances():
+
+def run_verb_test_iterators(learner, train_iter, test_iter):
+    for (_, linguistic_description, perceptual_representation) in train_iter:
         # Get the object matches first - preposition learner can't learn without already recognized objects
         learner.observe(
             LearningExample(perceptual_representation, linguistic_description)
         )
-    for (
-        _,
-        test_lingustics_description,
-        test_perceptual_representation,
-    ) in test_curriculum.instances():
+    for (_, test_lingustics_description, test_perceptual_representation) in test_iter:
         descriptions_from_learner = learner.describe(test_perceptual_representation)
         gold = test_lingustics_description.as_token_sequence()
         assert descriptions_from_learner
         assert gold in [desc.as_token_sequence() for desc in descriptions_from_learner]
+
+
+def run_verb_test(learner, situation_template, language_generator):
+    train_curriculum = _train_curriculum(situation_template, language_generator)
+    test_curriculum = _test_curriculum(situation_template, language_generator)
+    run_verb_test_iterators(
+        learner, train_curriculum.instances(), test_curriculum.instances()
+    )
+
+
+_QUEUE_DONE = None
+
+
+def _curriculum_worker(
+    instance_queue, situation_template, language_generator, *, train_curriculum=True
+):
+    # NTS: If this doesn't work try instead passing language_mode to this (through calls up to
+    # run_verb_test_parallel) and use the subset_verb_language_factory to create the language
+    # generator
+    if train_curriculum:
+        curriculum = _train_curriculum(situation_template, language_generator)
+    else:
+        curriculum = _test_curriculum(situation_template, language_generator)
+
+    for instance in curriculum.instances():
+        instance_queue.put(instance)
+
+    instance_queue.put(_QUEUE_DONE)
+
+
+PARALLEL_INSTANCE_GENERATION_TIMEOUT_SECONDS = 1000
+
+
+def _curriculum_generator(
+    pool, situation_template, language_generator, *, train_curriculum=True
+):
+    instance_queue = mp.Queue()
+    pool.apply_async(
+        _curriculum_worker,
+        args=(instance_queue, situation_template, language_generator),
+        kwds={"train_curriculum": train_curriculum},
+    )
+    while True:
+        try:
+            value = instance_queue.get(
+                timeout=PARALLEL_INSTANCE_GENERATION_TIMEOUT_SECONDS
+            )
+            if value != _QUEUE_DONE:
+                yield value
+            else:
+                break
+        except TimeoutError:
+            logging.warning("Timed out while waiting for next instance.")
+            break
+
+
+def _make_parallel_train_test_iterators(situation_templates, language_generator):
+    train_test_pairs = []
+    with mp.Pool() as pool:
+        for situation_template in situation_templates:
+            train = _curriculum_generator(pool, situation_template, language_generator)
+            test = _curriculum_generator(
+                pool, situation_template, language_generator, train_curriculum=False
+            )
+            train_test_pairs.append((train, test))
+    return train_test_pairs
+
+
+def run_verb_test_parallel(learner, situation_templates, language_generator):
+    train_test_pairs = _make_parallel_train_test_iterators(
+        situation_templates, language_generator
+    )
+    for train, test in train_test_pairs:
+        run_verb_test_iterators(learner, train, test)
 
 
 @pytest.mark.parametrize("language_mode", [LanguageMode.ENGLISH, LanguageMode.CHINESE])
