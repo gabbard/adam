@@ -185,18 +185,21 @@ def _curriculum_generator(
         args=(instance_queue, situation_template, language_generator),
         kwds={"train_curriculum": train_curriculum},
     )
-    while True:
-        try:
-            value = instance_queue.get(
-                timeout=PARALLEL_INSTANCE_GENERATION_TIMEOUT_SECONDS
-            )
-            if value != _QUEUE_DONE:
-                yield value
-            else:
+
+    def generator():
+        while True:
+            try:
+                value = instance_queue.get(
+                    timeout=PARALLEL_INSTANCE_GENERATION_TIMEOUT_SECONDS
+                )
+                if value != _QUEUE_DONE:
+                    yield value
+                else:
+                    break
+            except TimeoutError:
+                logging.warning("Timed out while waiting for next instance.")
                 break
-        except TimeoutError:
-            logging.warning("Timed out while waiting for next instance.")
-            break
+    return generator()
 
 
 def _make_parallel_train_test_iterators(situation_templates, language_generator):
