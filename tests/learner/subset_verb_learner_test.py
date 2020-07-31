@@ -157,23 +157,6 @@ def run_verb_test(learner, situation_template, language_generator):
 _QUEUE_DONE = None
 
 
-def _curriculum_worker(
-    instance_queue, situation_template, language_generator, *, train_curriculum=True
-):
-    # NTS: If this doesn't work try instead passing language_mode to this (through calls up to
-    # run_verb_test_parallel) and use the subset_verb_language_factory to create the language
-    # generator
-    if train_curriculum:
-        curriculum = _train_curriculum(situation_template, language_generator)
-    else:
-        curriculum = _test_curriculum(situation_template, language_generator)
-
-    for instance in curriculum.instances():
-        instance_queue.put(instance)
-
-    instance_queue.put(_QUEUE_DONE)
-
-
 PARALLEL_INSTANCE_GENERATION_TIMEOUT_SECONDS = 60
 
 
@@ -181,11 +164,22 @@ def _curriculum_generator(
     pool, situation_template, language_generator, *, train_curriculum=True
 ):
     instance_queue = mp.Queue()
-    pool.apply_async(
-        _curriculum_worker,
-        args=(instance_queue, situation_template, language_generator),
-        kwds={"train_curriculum": train_curriculum},
-    )
+
+    def _curriculum_worker():
+        # NTS: If this doesn't work try instead passing language_mode to this (through calls up to
+        # run_verb_test_parallel) and use the subset_verb_language_factory to create the language
+        # generator
+        if train_curriculum:
+            curriculum = _train_curriculum(situation_template, language_generator)
+        else:
+            curriculum = _test_curriculum(situation_template, language_generator)
+
+        for instance in curriculum.instances():
+            instance_queue.put(instance)
+
+        instance_queue.put(_QUEUE_DONE)
+
+    pool.apply_async(_curriculum_worker, args=(), error_callback=lambda err: print(f'Worker crashed with error: {err}'))
 
     def generator():
         while True:
