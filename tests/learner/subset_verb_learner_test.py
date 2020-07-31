@@ -173,7 +173,7 @@ def _curriculum_worker(
     instance_queue.put(_QUEUE_DONE)
 
 
-PARALLEL_INSTANCE_GENERATION_TIMEOUT_SECONDS = 1000
+PARALLEL_INSTANCE_GENERATION_TIMEOUT_SECONDS = 60
 
 
 def _curriculum_generator(
