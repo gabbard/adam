@@ -1,4 +1,5 @@
 import multiprocessing as mp
+import queue
 import logging
 from itertools import chain
 
@@ -196,7 +197,7 @@ def _curriculum_generator(
                     yield value
                 else:
                     break
-            except TimeoutError:
+            except queue.Empty:
                 logging.warning("Timed out while waiting for next instance.")
                 break
     return generator()
