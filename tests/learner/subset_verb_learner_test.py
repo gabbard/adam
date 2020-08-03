@@ -210,7 +210,7 @@ def _make_parallel_train_test_iterators(situation_templates, language_generator)
         for situation_template in situation_templates:
             train = _curriculum_generator(pool, manager, situation_template, language_generator)
             test = _curriculum_generator(
-                pool, situation_template, language_generator, train_curriculum=False
+                pool, manager, situation_template, language_generator, train_curriculum=False
             )
             train_test_pairs.append((train, test))
     return train_test_pairs
