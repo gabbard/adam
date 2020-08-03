@@ -160,26 +160,32 @@ _QUEUE_DONE = None
 PARALLEL_INSTANCE_GENERATION_TIMEOUT_SECONDS = 60
 
 
+def _curriculum_worker(instance_queue, situation_template, language_generator, *, train_curriculum=True):
+    # NTS: If this doesn't work try instead passing language_mode to this (through calls up to
+    # run_verb_test_parallel) and use the subset_verb_language_factory to create the language
+    # generator
+    if train_curriculum:
+        curriculum = _train_curriculum(situation_template, language_generator)
+    else:
+        curriculum = _test_curriculum(situation_template, language_generator)
+
+    for instance in curriculum.instances():
+        instance_queue.put(instance)
+
+    instance_queue.put(_QUEUE_DONE)
+
+
 def _curriculum_generator(
-    pool, situation_template, language_generator, *, train_curriculum=True
+        pool, manager, situation_template, language_generator, *, train_curriculum=True
 ):
-    instance_queue = mp.Queue()
+    instance_queue = manager.Queue()
 
-    def _curriculum_worker():
-        # NTS: If this doesn't work try instead passing language_mode to this (through calls up to
-        # run_verb_test_parallel) and use the subset_verb_language_factory to create the language
-        # generator
-        if train_curriculum:
-            curriculum = _train_curriculum(situation_template, language_generator)
-        else:
-            curriculum = _test_curriculum(situation_template, language_generator)
-
-        for instance in curriculum.instances():
-            instance_queue.put(instance)
-
-        instance_queue.put(_QUEUE_DONE)
-
-    pool.apply_async(_curriculum_worker, args=(), error_callback=lambda err: print(f'Worker crashed with error: {err}'))
+    pool.apply_async(
+        _curriculum_worker,
+        args=(instance_queue, situation_template, language_generator),
+        kwds={'train_curriculum': train_curriculum},
+        error_callback=lambda err: print(f'Worker crashed with error: {err}'),
+    )
 
     def generator():
         while True:
@@ -200,8 +206,9 @@ def _curriculum_generator(
 def _make_parallel_train_test_iterators(situation_templates, language_generator):
     train_test_pairs = []
     with mp.Pool() as pool:
+        manager = mp.Manager()
         for situation_template in situation_templates:
-            train = _curriculum_generator(pool, situation_template, language_generator)
+            train = _curriculum_generator(pool, manager, situation_template, language_generator)
             test = _curriculum_generator(
                 pool, situation_template, language_generator, train_curriculum=False
             )
